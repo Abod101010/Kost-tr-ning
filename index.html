@@ -147,6 +147,16 @@ nav.tabs .in{max-width:480px;margin:0 auto;display:grid;grid-template-columns:re
 nav.tabs button{border:0;background:transparent;min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:500;color:var(--muted)}
 nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:600}
 .toast{position:fixed;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));max-width:448px;margin:0 auto;background:var(--fg);color:var(--bg);border-radius:12px;padding:12px 14px;font-size:14px;z-index:6}
+
+/* Profiler */
+.who{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.who-btns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:3px}
+.who-btns button{border:0;background:transparent;border-radius:99px;min-height:38px;padding:0 16px;font-size:14px;font-weight:600;color:var(--muted)}
+.who-btns button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+:root[data-profile="cassie"]{--accent:#8C3A62;--accent-soft:#F4E6ED;--accent-ink:#6E2C4C;--on-accent:#FFFFFF;--ink-accent:#E89BC0}
+@media (prefers-color-scheme:dark){:root[data-profile="cassie"]:not([data-theme="light"]){--accent:#E08AB3;--accent-soft:#3A2130;--accent-ink:#F0B3CF;--on-accent:#1A0F14;--ink-accent:#E08AB3}}
+:root[data-theme="dark"][data-profile="cassie"]{--accent:#E08AB3;--accent-soft:#3A2130;--accent-ink:#F0B3CF;--on-accent:#1A0F14;--ink-accent:#E08AB3}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 <style>html{padding-top:env(safe-area-inset-top,0px)}body{margin:0;-webkit-text-size-adjust:100%}</style>
@@ -165,52 +175,180 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:600}
 </div></nav>
 
 <script>
-const START = { date: "2026-10-08", kg: 79.5 };
 const END = "2027-01-01";
-const TARGET_RATE = 0.45, LOW = 0.4, HIGH = 0.7, FLOOR = 1900, STEP = 150, PROTEIN = 170;
 const MONTHS = ["januari","februari","mars","april","maj","juni","juli","augusti","september","oktober","november","december"];
 const WDAYS = ["Söndag","Måndag","Tisdag","Onsdag","Torsdag","Fredag","Lördag"];
 const MOOD = ["Slut","Trött","Okej","Bra","Toppen"];
-const MEALS = [
-  { id: "frukost", name: "Frukost", desc: "250 g kvarg, 40 g havregryn, 100 g bär", kcal: 350, p: 36 },
-  { id: "lunch", name: "Lunch", desc: "150 g kyckling, 75 g ris, grönsaker, 1 msk olja", kcal: 560, p: 41 },
-  { id: "mellan", name: "Mellanmål", desc: "Proteinshake, banan, 20 g nötter", kcal: 340, p: 27 },
-  { id: "middag", name: "Middag", desc: "150 g halal nötfärs 10 % eller lax, 250 g potatis", kcal: 500, p: 36 },
-  { id: "kvall", name: "Kväll", desc: "250 g kvarg eller keso med frukt", kcal: 250, p: 30 }
-];
-const PASSES = {
-  A: { name: "Ben", ex: [
-    { id: "squat", name: "Knäböj", scheme: "4 × 5–8", n: 4 },
-    { id: "rdl", name: "Rumänsk marklyft", scheme: "3 × 8–10", n: 3 },
-    { id: "bss", name: "Bulgarisk utfallsböj", scheme: "3 × 8–10/ben", n: 3 },
-    { id: "curl", name: "Liggande bencurl", scheme: "3 × 10–12", n: 3 },
-    { id: "plank", name: "Plankan", scheme: "3 × 30–45 s", n: 3, nokg: true } ] },
-  B: { name: "Överkropp", ex: [
-    { id: "bench", name: "Bänkpress", scheme: "4 × 5–8", n: 4 },
-    { id: "row", name: "Skivstångsrodd", scheme: "4 × 6–10", n: 4 },
-    { id: "ohp", name: "Axelpress, hantlar", scheme: "3 × 8–10", n: 3 },
-    { id: "lat", name: "Latsdrag", scheme: "3 × 8–12", n: 3 },
-    { id: "face", name: "Face pulls", scheme: "3 × 12–15", n: 3 } ] },
-  C: { name: "Helkropp", ex: [
-    { id: "dl", name: "Marklyft", scheme: "3 × 5", n: 3 },
-    { id: "incl", name: "Lutande hantelpress", scheme: "3 × 8–10", n: 3 },
-    { id: "lp", name: "Benpress", scheme: "3 × 10–12", n: 3 },
-    { id: "cab", name: "Sittande kabelrodd", scheme: "3 × 10–12", n: 3 },
-    { id: "farm", name: "Farmers walk", scheme: "3 × 30 m", n: 3 } ] }
-};
-const WEEK = {
-  1: { kind: "lift", pass: "A", label: "Pass A", sub: "Ben, tungt", tag: "A" },
-  2: { kind: "hyrox", label: "Hyrox", sub: "Kondition", tag: "Hyrox" },
-  3: { kind: "class", label: "Cross Cage", sub: "Gruppass", tag: "Cage" },
-  4: { kind: "rest", label: "Vila", sub: "Promenad", tag: "Vila" },
-  5: { kind: "lift", pass: "B", label: "Pass B", sub: "Överkropp", tag: "B" },
-  6: { kind: "lift", pass: "C", label: "Pass C", sub: "Helkropp", tag: "C" },
-  0: { kind: "rest", label: "Vila", sub: "Promenad", tag: "Vila" }
-};
-const BOTTLE_GOAL = { rest: 7, lift: 8, class: 8, hyrox: 9 };
 
-let db = null, canWrite = true, ready = false;
-let entries = [], months = {}, days = {}, workouts = {};
+const PROFILES = {
+  abbe: {
+    id: "abbe", name: "Abbe",
+    start: { date: "2026-10-08", kg: 79.5 },
+    kcal: 2100, protein: 170, deficitText: "Underskott 500 kcal",
+    rate: 0.45, low: 0.4, high: 0.7, rateNote: "−500 kcal/dag",
+    rule: { min: 0.3, max: 0.8, step: 150, floor: 1900 },
+    focus: "",
+    measures: [{ id: "waist", label: "Midja", hint: "Midjan mäts i höjd med naveln, avslappnad mage.", ph: "t.ex. 94", good: "down" }],
+    bottles: { rest: 7, lift: 8, class: 8, hyrox: 9 },
+    meals: [
+      { id: "frukost", name: "Frukost", desc: "250 g kvarg, 40 g havregryn, 100 g bär", kcal: 350, p: 36 },
+      { id: "lunch", name: "Lunch", desc: "150 g kyckling, 75 g ris, grönsaker, 1 msk olja", kcal: 560, p: 41 },
+      { id: "mellan", name: "Mellanmål", desc: "Proteinshake, banan, 20 g nötter", kcal: 340, p: 27 },
+      { id: "middag", name: "Middag", desc: "150 g halal nötfärs 10 % eller lax, 250 g potatis", kcal: 500, p: 36 },
+      { id: "kvall", name: "Kväll", desc: "250 g kvarg eller keso med frukt", kcal: 250, p: 30 }
+    ],
+    mealTag: "Halal · tryck för att bocka av",
+    mealNote: "Planen ger cirka 2 000 kcal. Resten räcker till mjölk i kaffet, sås och dressing.",
+    dietRules: [
+      "Protein i varje måltid, cirka 30–40 g. Byt fritt mellan kyckling, halal nötkött, fisk, ägg, kvarg, keso och linser.",
+      "Fyll halva tallriken med grönsaker.",
+      "Kolhydraterna gärna runt passen: ris, potatis eller havre.",
+      "Kolla gelatin och E441 i proteinbars, godis och vissa kvargdrycker.",
+      "Ät något du tycker om en gång i veckan, inräknat i dagens kalorier.",
+      "Sov 7–8 timmar. Dålig sömn ökar hungern och sänker styrkan."
+    ],
+    passes: {
+      A: { name: "Ben", ex: [
+        { id: "squat", name: "Knäböj", scheme: "4 × 5–8", n: 4 },
+        { id: "rdl", name: "Rumänsk marklyft", scheme: "3 × 8–10", n: 3 },
+        { id: "bss", name: "Bulgarisk utfallsböj", scheme: "3 × 8–10/ben", n: 3 },
+        { id: "curl", name: "Liggande bencurl", scheme: "3 × 10–12", n: 3 },
+        { id: "plank", name: "Plankan", scheme: "3 × 30–45 s", n: 3, nokg: true } ] },
+      B: { name: "Överkropp", ex: [
+        { id: "bench", name: "Bänkpress", scheme: "4 × 5–8", n: 4 },
+        { id: "row", name: "Skivstångsrodd", scheme: "4 × 6–10", n: 4 },
+        { id: "ohp", name: "Axelpress, hantlar", scheme: "3 × 8–10", n: 3 },
+        { id: "lat", name: "Latsdrag", scheme: "3 × 8–12", n: 3 },
+        { id: "face", name: "Face pulls", scheme: "3 × 12–15", n: 3 } ] },
+      C: { name: "Helkropp", ex: [
+        { id: "dl", name: "Marklyft", scheme: "3 × 5", n: 3 },
+        { id: "incl", name: "Lutande hantelpress", scheme: "3 × 8–10", n: 3 },
+        { id: "lp", name: "Benpress", scheme: "3 × 10–12", n: 3 },
+        { id: "cab", name: "Sittande kabelrodd", scheme: "3 × 10–12", n: 3 },
+        { id: "farm", name: "Farmers walk", scheme: "3 × 30 m", n: 3 } ] }
+    },
+    week: {
+      1: { kind: "lift", pass: "A", label: "Pass A", sub: "Ben, tungt", tag: "A" },
+      2: { kind: "hyrox", label: "Hyrox", sub: "Kondition", tag: "Hyrox" },
+      3: { kind: "class", label: "Cross Cage", sub: "Gruppass", tag: "Cage" },
+      4: { kind: "rest", label: "Vila", sub: "Promenad", tag: "Vila" },
+      5: { kind: "lift", pass: "B", label: "Pass B", sub: "Överkropp", tag: "B" },
+      6: { kind: "lift", pass: "C", label: "Pass C", sub: "Helkropp", tag: "C" },
+      0: { kind: "rest", label: "Vila", sub: "Promenad", tag: "Vila" }
+    },
+    progression: [
+      "Lämna 1–2 reps i reserv på sista setet.",
+      "Klarar du övre delen av intervallet på alla set: öka 2,5 kg i överkroppen, 5 kg i knäböj och marklyft.",
+      "Vila 2–3 min i basövningarna, 60–90 s i övriga.",
+      "Står en övning still tre pass i rad: sänk vikten 10 % och bygg upp igen.",
+      "Vecka 52 (21–27 dec) är en lättare vecka: hälften av seten."
+    ]
+  },
+  cassie: {
+    id: "cassie", name: "Cassie",
+    start: { date: "2026-10-08", kg: 60.0 },
+    kcal: 1900, protein: 125, deficitText: "Lätt underskott, ca 250 kcal",
+    rate: 0.2, low: 0.1, high: 0.35, rateNote: "−250 kcal/dag",
+    rule: { min: 0.1, max: 0.4, step: 100, floor: 1700 },
+    focus: "Vikten är inte huvudmålet. Midjan ska ner och stussen upp, så måtten säger mer än vågen.",
+    measures: [
+      { id: "waist", label: "Midja", hint: "", ph: "t.ex. 70", good: "down" },
+      { id: "hip", label: "Stuss", hint: "", ph: "t.ex. 96", good: "up" }
+    ],
+    measureHint: "Midjan mäts på smalaste stället. Stussen mäts runt rumpans största omkrets, fötterna ihop.",
+    bottles: { rest: 6, lift: 7, class: 7, hyrox: 8 },
+    meals: [
+      { id: "frukost", name: "Frukost", desc: "200 g kvarg, 40 g havregryn, bär", kcal: 310, p: 29 },
+      { id: "lunch", name: "Lunch", desc: "120 g kyckling, 70 g ris, grönsaker, 1 msk olja", kcal: 505, p: 33 },
+      { id: "mellan", name: "Mellanmål", desc: "Proteinshake, banan, 15 g nötter", kcal: 310, p: 26 },
+      { id: "middag", name: "Middag", desc: "120 g lax eller nötfärs, 200 g potatis, grönsaker", kcal: 440, p: 28 },
+      { id: "kvall", name: "Kväll", desc: "150 g kvarg med frukt", kcal: 150, p: 18 }
+    ],
+    mealTag: "Tryck för att bocka av",
+    mealNote: "Planen ger cirka 1 700 kcal. Resten (cirka 200) är till sås, dressing, mjölk i kaffet eller lite extra kolhydrater före Hyrox.",
+    dietRules: [
+      "Protein i varje måltid, cirka 25–35 g. Det är byggstenen för rumpan.",
+      "Ät kolhydrater före och efter passen. Utan dem orkar du inte lyfta tungt eller köra Hyrox fullt.",
+      "Fyll halva tallriken med grönsaker. Det håller magen platt och mätt.",
+      "Mycket salt och kolsyra kan ge svullen mage tillfälligt. Det är vätska, inte fett.",
+      "Ät något du tycker om en gång i veckan, inräknat i dagens kalorier.",
+      "Sov 7–8 timmar. Musklerna växer när du vilar."
+    ],
+    passes: {
+      A: { name: "Rumpa, tungt", ex: [
+        { id: "ht", name: "Hip thrust", scheme: "4 × 8–10", n: 4 },
+        { id: "rdl", name: "Rumänsk marklyft", scheme: "3 × 8–10", n: 3 },
+        { id: "bss", name: "Bulgarisk utfallsböj", scheme: "3 × 10/ben", n: 3 },
+        { id: "kick", name: "Kabel-kickback", scheme: "3 × 12–15/ben", n: 3 },
+        { id: "abd", name: "Abduktion, maskin", scheme: "3 × 15–20", n: 3 } ] },
+      B: { name: "Rumpa & ben", ex: [
+        { id: "squat", name: "Knäböj, goblet eller stång", scheme: "4 × 8–10", n: 4 },
+        { id: "sglb", name: "Enbens glute bridge", scheme: "3 × 12/ben", n: 3 },
+        { id: "step", name: "Step-ups, hantlar", scheme: "3 × 10/ben", n: 3 },
+        { id: "pull", name: "Kabel pull-through", scheme: "3 × 12–15", n: 3 },
+        { id: "pallof", name: "Pallof press", scheme: "3 × 10/sida", n: 3 } ] }
+    },
+    week: {
+      1: { kind: "lift", pass: "A", label: "Pass A", sub: "Rumpa, tungt", tag: "A" },
+      2: { kind: "hyrox", label: "Hyrox", sub: "Kondition", tag: "Hyrox" },
+      3: { kind: "class", label: "Cross Cage", sub: "Gruppass", tag: "Cage" },
+      4: { kind: "lift", pass: "B", label: "Pass B", sub: "Rumpa & ben", tag: "B" },
+      5: { kind: "class", label: "Hyrox eller Cage", sub: "Valfritt gruppass", tag: "Pass" },
+      6: { kind: "rest", label: "Aktiv vila", sub: "Promenad 45 min", tag: "Vila" },
+      0: { kind: "rest", label: "Vila", sub: "Återhämtning", tag: "Vila" }
+    },
+    progression: [
+      "Rumpan växer av tunga lyft och protein. Gruppassen bygger kondition och form.",
+      "Lämna 1–2 reps i reserv på sista setet. Håll 1 sekund i toppen på hip thrust och bridge.",
+      "Klarar du övre delen av intervallet på alla set: öka 2,5–5 kg i hip thrust, knäböj och marklyft, 1–2 kg i övriga.",
+      "Är benen slut efter Hyrox, kör Pass B lite lättare samma vecka.",
+      "Midjan blir smalare när fettet minskar. Pallof press och plankan stärker bålen utan att bygga på midjan.",
+      "Vecka 52 (21–27 dec) är en lättare vecka: hälften av seten."
+    ]
+  }
+};
+
+/* ---------- Lagring i telefonen ---------- */
+const KEY = "formplan-data-v1";
+function blank() { return { weighins: {}, months: {}, days: {}, workouts: {} }; }
+function seed(pid, p) {
+  const s = PROFILES[pid].start;
+  if (!Object.keys(p.weighins).length) p.weighins[s.date] = { date: s.date, kg: s.kg, mood: 3, note: "Startvikt" };
+  if (!Object.keys(p.months).length) {
+    const m = macrosFor(PROFILES[pid].kcal, PROFILES[pid].protein);
+    p.months["2026-10"] = { kcal: PROFILES[pid].kcal, protein: m.p, fat: m.f, carbs: m.c, setOn: s.date };
+  }
+}
+function normalize(raw) {
+  let st;
+  if (raw && raw.v === 2 && raw.p) st = raw;
+  else if (raw && raw.weighins) st = { v: 2, active: "abbe", p: { abbe: { weighins: raw.weighins || {}, months: raw.months || {}, days: raw.days || {}, workouts: raw.workouts || {} } } };
+  else st = { v: 2, active: "abbe", p: {} };
+  Object.keys(PROFILES).forEach(pid => {
+    const p = st.p[pid] || (st.p[pid] = blank());
+    ["weighins", "months", "days", "workouts"].forEach(c => { if (!p[c] || typeof p[c] !== "object") p[c] = {}; });
+    seed(pid, p);
+  });
+  if (!PROFILES[st.active]) st.active = "abbe";
+  return st;
+}
+let store;
+try { store = normalize(JSON.parse(localStorage.getItem(KEY))); } catch (e) { store = normalize(null); }
+function persist() {
+  try { localStorage.setItem(KEY, JSON.stringify(store)); return true; }
+  catch (e) { toast("Kunde inte spara. Telefonens lagring kan vara full."); return false; }
+}
+persist();
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+
+const P = () => PROFILES[store.active];
+const D = () => store.p[store.active];
+function setDoc(col, id, data) { D()[col][id] = JSON.parse(JSON.stringify(data)); persist(); }
+function delDoc(col, id) { delete D()[col][id]; persist(); }
+function entries() {
+  return Object.values(D().weighins).filter(x => x && typeof x.kg === "number" && x.date).sort((a, b) => a.date < b.date ? -1 : 1);
+}
+
 let tab = "idag", trainPass = null, pendingDel = null, deferred = false;
 let form = { kg: null, mood: 4, msg: "", err: false };
 let applyMsg = "";
@@ -228,74 +366,62 @@ const shortDate = s => Number(s.slice(8)) + " " + MONTHS[Number(s.slice(5, 7)) -
 const monthKey = s => s.slice(0, 7);
 const nextMonthKey = k => { let [y, m] = k.split("-").map(Number); m++; if (m > 12) { m = 1; y++; } return y + "-" + String(m).padStart(2, "0"); };
 const monthName = k => MONTHS[Number(k.slice(5)) - 1];
-const dayPlan = s => WEEK[parse(s).getDay()];
+const dayPlan = s => P().week[parse(s).getDay()];
+const signed = (v, d = 1) => (v > 0 ? "+" : v < 0 ? "−" : "±") + fmt(Math.abs(v), d);
 
-function macrosFor(kcal) {
+function macrosFor(kcal, protein) {
   const f = Math.round(kcal * 0.28 / 9 / 5) * 5;
-  const c = Math.max(0, Math.round((kcal - PROTEIN * 4 - f * 9) / 4 / 5) * 5);
-  return { p: PROTEIN, f, c };
+  const c = Math.max(0, Math.round((kcal - protein * 4 - f * 9) / 4 / 5) * 5);
+  return { p: protein, f, c };
 }
 function kcalFor(key) {
+  const months = D().months;
   const ks = Object.keys(months).filter(k => k <= key).sort();
-  return ks.length ? months[ks[ks.length - 1]].kcal : 2100;
+  return ks.length ? months[ks[ks.length - 1]].kcal : P().kcal;
 }
 
-/* One write at a time per document; the latest value wins */
-const wq = {};
-function save(col, id, data) {
-  const k = col + "/" + id, q = wq[k] || (wq[k] = { busy: false, next: null });
-  q.next = data;
-  if (!q.busy) flush(k, col, id);
-}
-async function flush(k, col, id) {
-  const q = wq[k]; q.busy = true;
-  while (q.next) {
-    const d = q.next; q.next = null;
-    try { await db.collection(col).doc(id).set(d); }
-    catch (e) {
-      if (e && e.code === "invalid_argument") { canWrite = false; toast("Du kan bara läsa den här appen."); }
-      else toast("Kunde inte spara. Kontrollera anslutningen och försök igen.");
-    }
-  }
-  q.busy = false;
-}
 let toastTimer;
-function toast(t) { const el = $("#toast"); el.textContent = t; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 3500); }
-function needWrite() {
-  if (!db) { toast("Appen kan inte spara just nu."); return false; }
-  if (!canWrite) { toast("Du kan bara läsa den här appen."); return false; }
-  return true;
+function toast(t) { const el = document.getElementById("toast"); el.textContent = t; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 3500); }
+
+function switcher() {
+  return `<div class="who" role="group" aria-label="Profil">
+    <span class="eyebrow">Formplan</span>
+    <div class="who-btns">${Object.values(PROFILES).map(p => `<button type="button" data-profile="${p.id}" aria-pressed="${store.active === p.id}">${p.name}</button>`).join("")}</div>
+  </div>`;
 }
+const weekNo = t => Math.min(13, Math.max(1, Math.floor(ddiff(P().start.date, t) / 7) + 1));
 
 /* ---------- Idag ---------- */
-function dayDoc(d) { return days[d] || { meals: {}, bottles: 0 }; }
+function dayDoc(d) { return D().days[d] || { meals: {}, bottles: 0 }; }
 function bottleSvg(full) {
   const body = full ? "var(--water)" : "var(--water-soft)", stroke = full ? "var(--water)" : "var(--water-line)";
   const cap = full ? "var(--fg)" : "var(--water-line)", label = full ? "var(--water-label)" : "var(--water-line)";
   return `<svg width="34" height="54" viewBox="0 0 38 58" aria-hidden="true"><rect x="13" y="1" width="12" height="7" rx="2" fill="${cap}"/><path d="M14 8h10v5c0 2 8 4 8 10v29a5 5 0 0 1-5 5H11a5 5 0 0 1-5-5V23c0-6 8-8 8-10z" fill="${body}" stroke="${stroke}" stroke-width="1.5"/><rect x="9" y="30" width="20" height="10" rx="2" fill="${label}" opacity="${full ? 1 : .5}"/></svg>`;
 }
+const chevron = () => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+const calIcon = c => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>`;
+
 function renderIdag() {
-  const t = today(), d = parse(t), plan = dayPlan(t), doc = dayDoc(t);
-  const kcal = kcalFor(monthKey(t)), m = macrosFor(kcal);
+  const pr = P(), t = today(), d = parse(t), plan = dayPlan(t), doc = dayDoc(t);
+  const kcal = kcalFor(monthKey(t)), m = macrosFor(kcal, pr.protein);
   let eaten = 0, prot = 0;
-  MEALS.forEach(x => { if (doc.meals && doc.meals[x.id]) { eaten += x.kcal; prot += x.p; } });
-  const week = Math.min(13, Math.max(1, Math.floor(ddiff(START.date, t) / 7) + 1));
-  const goal = BOTTLE_GOAL[plan.kind], bottles = doc.bottles || 0;
+  pr.meals.forEach(x => { if (doc.meals && doc.meals[x.id]) { eaten += x.kcal; prot += x.p; } });
+  const goal = pr.bottles[plan.kind], bottles = doc.bottles || 0;
   const tomorrow = dayPlan(addDays(t, 1));
-  const lastW = entries[entries.length - 1];
+  const ents = entries(), lastW = ents[ents.length - 1];
   const weighedToday = lastW && lastW.date === t;
   let daysToMon = (8 - d.getDay()) % 7; if (daysToMon === 0) daysToMon = 7;
   const nextMon = addDays(t, d.getDay() === 1 ? 7 : daysToMon);
   const dayLabel = { rest: "Vilodag", lift: "Träningsdag", class: "Träningsdag", hyrox: "Hyrox-dagen" }[plan.kind];
-  let remind;
-  if (d.getDay() === 1 && !weighedToday) remind = `<button type="button" class="remind go" data-go="logga">${calIcon("#FFFFFF")}<span style="flex:1">Dags för veckovägningen. Tryck för att logga.</span></button>`;
-  else remind = `<button type="button" class="remind" data-go="logga">${calIcon("var(--target)")}<span style="flex:1">Nästa vägning: <b>måndag ${shortDate(nextMon)}</b>, på morgonen</span></button>`;
+  const remind = d.getDay() === 1 && !weighedToday
+    ? `<button type="button" class="remind go" data-go="logga">${calIcon("#FFFFFF")}<span style="flex:1">Dags för veckovägningen. Tryck för att logga.</span></button>`
+    : `<button type="button" class="remind" data-go="logga">${calIcon("var(--target)")}<span style="flex:1">Nästa vägning: <b>måndag ${shortDate(nextMon)}</b>, på morgonen</span></button>`;
 
-  return `
-  <div class="head"><div class="eyebrow">${WDAYS[d.getDay()]} ${shortDate(t)} · Vecka ${week} av 12</div><h1>Hej Abbe</h1></div>
+  return `${switcher()}
+  <div class="head"><div class="eyebrow">${WDAYS[d.getDay()]} ${shortDate(t)} · Vecka ${weekNo(t)} av 12</div><h1>Hej ${pr.name}</h1></div>
 
   <div class="card">
-    <div class="rowb"><span class="lbl">Kalorier idag</span><span class="fine" style="font-size:12px">Underskott 500 kcal</span></div>
+    <div class="rowb"><span class="lbl">Kalorier idag</span><span class="fine" style="font-size:12px">${pr.deficitText}</span></div>
     <div style="display:flex;align-items:baseline;gap:8px"><span class="big">${fint(eaten)}</span><span class="fine" style="font-size:15px">av ${fint(kcal)} kcal</span></div>
     <div class="bar"><i style="width:${Math.min(100, eaten / kcal * 100)}%"></i></div>
     <div class="split">
@@ -319,16 +445,16 @@ function renderIdag() {
   </div>
 
   <div style="display:flex;flex-direction:column;gap:10px">
-    <div class="rowb"><h2>Måltider</h2><span class="fine" style="font-size:12px">Halal · tryck för att bocka av</span></div>
+    <div class="rowb"><h2>Måltider</h2><span class="fine" style="font-size:12px">${pr.mealTag}</span></div>
     <div class="card meals">
-      ${MEALS.map(x => { const on = !!(doc.meals && doc.meals[x.id]); return `
+      ${pr.meals.map(x => { const on = !!(doc.meals && doc.meals[x.id]); return `
         <button type="button" class="meal${on ? " on" : ""}" data-meal="${x.id}" aria-pressed="${on}">
           <span class="tick">${on ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>' : ""}</span>
           <span class="t"><b>${x.name}</b><span>${x.desc}</span></span>
           <span class="k"><b style="font-weight:500;font-size:14px">${x.kcal}</b><span>${x.p} g P</span></span>
         </button>`; }).join("")}
     </div>
-    <p class="fine" style="font-size:12px">Planen ger cirka 2 000 kcal. Resten räcker till mjölk i kaffet, sås och dressing.</p>
+    <p class="fine" style="font-size:12px">${pr.mealNote}</p>
   </div>
 
   <div class="card ink">
@@ -342,32 +468,25 @@ function renderIdag() {
 
   <div class="card">
     <details><summary>Kostregler</summary>
-      <ul class="rules">
-        <li>Protein i varje måltid, cirka 30–40 g. Byt fritt mellan kyckling, halal nötkött, fisk, ägg, kvarg, keso och linser.</li>
-        <li>Fyll halva tallriken med grönsaker.</li>
-        <li>Kolhydraterna gärna runt passen: ris, potatis eller havre.</li>
-        <li>Kolla gelatin och E441 i proteinbars, godis och vissa kvargdrycker.</li>
-        <li>Ät något du tycker om en gång i veckan, inräknat i dagens kalorier.</li>
-        <li>Sov 7–8 timmar. Dålig sömn ökar hungern och sänker styrkan.</li>
-      </ul>
+      <ul class="rules">${pr.dietRules.map(r => `<li>${r}</li>`).join("")}</ul>
     </details>
   </div>`;
 }
-const chevron = () => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
-const calIcon = c => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>`;
 
 /* ---------- Logga ---------- */
 function renderLogga() {
-  const t = today(), d = parse(t);
-  const last = entries[entries.length - 1];
-  const prev = [...entries].reverse().find(e => e.date < t) || last;
-  if (form.kg === null) form.kg = Math.round((last ? last.kg : START.kg) * 10);
+  const pr = P(), t = today(), d = parse(t), ents = entries();
+  const last = ents[ents.length - 1];
+  const prev = [...ents].reverse().find(e => e.date < t) || last;
+  if (form.kg === null) form.kg = Math.round((last ? last.kg : pr.start.kg) * 10);
   const delta = prev ? form.kg / 10 - prev.kg : 0;
-  const week = Math.min(13, Math.max(1, Math.floor(ddiff(START.date, t) / 7) + 1));
-  const existing = entries.find(e => e.date === t);
+  const existing = ents.find(e => e.date === t);
   const dColor = delta < 0 ? "var(--accent)" : delta > 0 ? "var(--target-ink)" : "var(--muted)";
-  return `
-  <div class="head"><div class="eyebrow">${WDAYS[d.getDay()]} ${shortDate(t)} · Vecka ${week}</div><h1>Veckovägning</h1>
+  const fields = pr.measures.map(m => `<label class="f" for="f-${m.id}">${m.label} (cm)<input class="in" id="f-${m.id}" type="text" inputmode="decimal" placeholder="${m.ph}" value="${existing && existing[m.id] ? fmt(existing[m.id]) : ""}"></label>`).join("")
+    + `<label class="f" for="f-steps">Snitt steg/dag<input class="in" id="f-steps" type="text" inputmode="numeric" placeholder="t.ex. 8 500" value="${existing && existing.steps ? existing.steps : ""}"></label>`;
+  const hint = pr.measureHint || pr.measures[0].hint;
+  return `${switcher()}
+  <div class="head"><div class="eyebrow">${WDAYS[d.getDay()]} ${shortDate(t)} · Vecka ${weekNo(t)}</div><h1>Veckovägning</h1>
     <p class="fine" style="margin-top:4px">På morgonen, efter toaletten och före frukost. Samma veckodag varje vecka.</p></div>
 
   <div class="card" style="align-items:center">
@@ -377,132 +496,141 @@ function renderLogga() {
       <div style="display:flex;align-items:baseline;gap:4px"><span class="big" style="font-size:68px">${fmt(form.kg / 10)}</span><span class="fine" style="font-size:16px">kg</span></div>
       <button type="button" class="round lg" data-act="kg+" aria-label="Öka 0,1 kg">+</button>
     </div>
-    <span style="font-family:var(--mono);font-size:13px;color:${dColor}">${prev ? (delta > 0 ? "+" : delta < 0 ? "−" : "±") + fmt(Math.abs(delta)) + " kg sedan " + shortDate(prev.date) : "Första vägningen"}</span>
+    <span style="font-family:var(--mono);font-size:13px;color:${dColor}">${prev ? signed(delta) + " kg sedan " + shortDate(prev.date) : "Första vägningen"}</span>
   </div>
 
-  <div class="grid2">
-    <label class="f" for="f-waist">Midja (cm)<input class="in" id="f-waist" type="text" inputmode="decimal" placeholder="t.ex. 94" value="${existing && existing.waist ? fmt(existing.waist) : ""}"></label>
-    <label class="f" for="f-steps">Snitt steg/dag<input class="in" id="f-steps" type="text" inputmode="numeric" placeholder="t.ex. 8 500" value="${existing && existing.steps ? existing.steps : ""}"></label>
-  </div>
-  <p class="fine" style="font-size:12px;margin-top:-8px">Midjan mäts i höjd med naveln, avslappnad mage.</p>
+  <div class="${pr.measures.length > 1 ? "grid3" : "grid2"}">${fields}</div>
+  <p class="fine" style="font-size:12px;margin-top:-8px">${hint}</p>
 
   <div style="display:flex;flex-direction:column;gap:8px">
     <span class="lbl" style="font-size:12px">Hur har veckan känts?</span>
     <div class="moods">${MOOD.map((l, i) => `<button type="button" class="mood" data-mood="${i + 1}" aria-pressed="${form.mood === i + 1}"><b>${i + 1}</b><span>${l}</span></button>`).join("")}</div>
   </div>
 
-  <label class="f" for="f-note">Anteckning<input class="in" id="f-note" type="text" maxlength="200" placeholder="t.ex. dålig sömn, pers i knäböj" value="${esc(existing ? existing.note : "")}"></label>
+  <label class="f" for="f-note">Anteckning<input class="in" id="f-note" type="text" maxlength="200" placeholder="t.ex. dålig sömn, pers i ${pr.id === "cassie" ? "hip thrust" : "knäböj"}" value="${esc(existing ? existing.note : "")}"></label>
 
   ${form.msg ? `<div class="status${form.err ? " err" : ""}" role="status">${esc(form.msg)}</div>` : ""}
   <button type="button" class="btn" data-act="save-week">${existing ? "Uppdatera " + shortDate(t) : "Spara vecka"}</button>
 
   <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
     <h2>Historik</h2>
-    ${!db ? `<p class="fine">Loggen kan inte visas just nu.</p>`
-      : !entries.length ? `<p class="fine">Inga vägningar än. Din första hamnar här.</p>`
-      : `<div class="card hist">${[...entries].reverse().map((e, i, arr) => { const p = arr[i + 1]; const dl = p ? e.kg - p.kg : null; return `
+    ${!ents.length ? `<p class="fine">Inga vägningar än. Den första hamnar här.</p>`
+      : `<div class="card hist">${[...ents].reverse().map((e, i, arr) => { const p = arr[i + 1]; const dl = p ? e.kg - p.kg : null;
+        const meas = pr.measures.filter(m => e[m.id]).map(m => m.label.toLowerCase() + " " + fmt(e[m.id]) + " cm").join(" · ");
+        return `
         <div class="hrow">
-          <div class="d"><b style="font-size:14px">${shortDate(e.date)}</b><span>${e.mood ? e.mood + " · " + MOOD[e.mood - 1] : ""}${e.waist ? " · " + fmt(e.waist) + " cm" : ""}${e.note ? " · " + esc(e.note) : ""}</span></div>
-          <div class="w"><b style="font-weight:500">${fmt(e.kg)} kg</b><span style="color:${dl === null ? "var(--muted)" : dl <= 0 ? "var(--accent)" : "var(--target-ink)"}">${dl === null ? "start" : (dl > 0 ? "+" : dl < 0 ? "−" : "±") + fmt(Math.abs(dl))}</span></div>
-          ${canWrite ? `<button type="button" class="del${pendingDel === e.date ? " confirm" : ""}" data-del="${e.date}">${pendingDel === e.date ? "Bekräfta" : "Ta bort"}</button>` : "<span></span>"}
+          <div class="d"><b style="font-size:14px">${shortDate(e.date)}</b><span>${e.mood ? e.mood + " · " + MOOD[e.mood - 1] : ""}${meas ? " · " + meas : ""}${e.note ? " · " + esc(e.note) : ""}</span></div>
+          <div class="w"><b style="font-weight:500">${fmt(e.kg)} kg</b><span style="color:${dl === null ? "var(--muted)" : dl <= 0 ? "var(--accent)" : "var(--target-ink)"}">${dl === null ? "start" : signed(dl)}</span></div>
+          <button type="button" class="del${pendingDel === e.date ? " confirm" : ""}" data-del="${e.date}">${pendingDel === e.date ? "Bekräfta" : "Ta bort"}</button>
         </div>`; }).join("")}</div>`}
   </div>`;
 }
 
 /* ---------- Framsteg ---------- */
 function trend() {
-  if (entries.length < 2) return null;
-  const last = entries[entries.length - 1];
-  const win = entries.filter(e => ddiff(e.date, last.date) <= 28);
+  const ents = entries();
+  if (ents.length < 2) return null;
+  const last = ents[ents.length - 1];
+  const win = ents.filter(e => ddiff(e.date, last.date) <= 28);
   if (win.length < 2 || ddiff(win[0].date, last.date) < 14) return null;
   const xs = win.map(e => ddiff(win[0].date, e.date)), ys = win.map(e => e.kg);
   const mx = xs.reduce((a, b) => a + b, 0) / xs.length, my = ys.reduce((a, b) => a + b, 0) / ys.length;
   let num = 0, den = 0; xs.forEach((x, i) => { num += (x - mx) * (ys[i] - my); den += (x - mx) ** 2; });
   const moods = win.map(e => e.mood).filter(Boolean);
-  const waists = win.filter(e => e.waist);
+  const md = id => { const w = win.filter(e => e[id]); return w.length >= 2 ? w[w.length - 1][id] - w[0][id] : null; };
   return {
     perWeek: -(num / den) * 7,
     mood: moods.length ? moods.reduce((a, b) => a + b, 0) / moods.length : 3,
-    waistDelta: waists.length >= 2 ? waists[waists.length - 1].waist - waists[0].waist : null
+    waistDelta: md("waist"), hipDelta: md("hip")
   };
 }
 function suggest() {
-  const t = trend(), cur = kcalFor(monthKey(today()));
+  const pr = P(), r = pr.rule, t = trend(), cur = kcalFor(monthKey(today()));
   if (!t) return { kind: "wait", cur };
   let kcal = cur, kind = "keep", why;
-  if (t.mood <= 2) { kcal = cur + STEP; kind = "up"; why = "Måendet har legat lågt. Mer energi skyddar träningen och musklerna."; }
-  else if (t.perWeek > 0.8) { kcal = cur + STEP; kind = "up"; why = "Du går ner snabbare än 0,8 kg i veckan, vilket riskerar muskelmassa."; }
-  else if (t.perWeek < 0.3) {
-    if (t.waistDelta !== null && t.waistDelta <= -1) why = "Vikten rör sig långsamt men midjan har minskat. Behåll nivån en vecka till.";
-    else { kcal = Math.max(FLOOR, cur - STEP); kind = kcal < cur ? "down" : "keep"; why = kcal < cur ? "Trenden är under 0,3 kg i veckan, så förbrukningen är lägre än uppskattat." : "Du är redan på 1 900 kcal. Öka stegen med 2 000 per dag i stället."; }
+  if (t.mood <= 2) { kcal = cur + r.step; kind = "up"; why = "Måendet har legat lågt. Mer energi skyddar träningen och musklerna."; }
+  else if (t.perWeek > r.max) { kcal = cur + r.step; kind = "up"; why = "Du går ner snabbare än " + fmt(r.max) + " kg i veckan, vilket riskerar muskelmassa."; }
+  else if (t.perWeek < r.min) {
+    if (t.waistDelta !== null && t.waistDelta <= -1) why = "Vikten rör sig långsamt men midjan har minskat" + (t.hipDelta !== null && t.hipDelta > 0 ? " och stussen ökat" : "") + ". Det fungerar, behåll nivån.";
+    else { kcal = Math.max(r.floor, cur - r.step); kind = kcal < cur ? "down" : "keep"; why = kcal < cur ? "Trenden är under " + fmt(r.min) + " kg i veckan och midjan står still." : "Du är redan på " + fint(r.floor) + " kcal. Öka stegen med 2 000 per dag i stället."; }
   } else why = "Tempot ligger i rätt intervall. Fortsätt som nu.";
   return { kind, kcal, cur, why, t };
 }
 function chart() {
+  const pr = P(), S = pr.start, ents = entries();
   const W = 360, H = 210, L = 30, R = 10, T = 12, B = 26;
-  const total = ddiff(START.date, END);
-  const pts = entries.map(e => ({ x: ddiff(START.date, e.date), y: e.kg }));
-  const endLow = START.kg - HIGH * total / 7, endHigh = START.kg - LOW * total / 7, endT = START.kg - TARGET_RATE * total / 7;
-  const ymin = Math.floor(Math.min(endLow, ...pts.map(p => p.y)) - 0.5), ymax = Math.ceil(Math.max(START.kg, ...pts.map(p => p.y)) + 0.5);
+  const total = ddiff(S.date, END);
+  const pts = ents.map(e => ({ x: ddiff(S.date, e.date), y: e.kg }));
+  const endLow = S.kg - pr.high * total / 7, endHigh = S.kg - pr.low * total / 7, endT = S.kg - pr.rate * total / 7;
+  const ymin = Math.floor(Math.min(endLow, ...pts.map(p => p.y)) - 0.5), ymax = Math.ceil(Math.max(S.kg, ...pts.map(p => p.y)) + 0.5);
   const sx = x => L + (x / total) * (W - L - R), sy = y => T + (ymax - y) / (ymax - ymin) * (H - T - B);
   const stepY = ymax - ymin > 8 ? 2 : 1;
   let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Vikt över tid mot mållinjen">`;
-  s += `<polygon points="${sx(0)},${sy(START.kg)} ${sx(total)},${sy(endHigh)} ${sx(total)},${sy(endLow)}" fill="var(--line-soft)"/>`;
+  s += `<polygon points="${sx(0)},${sy(S.kg)} ${sx(total)},${sy(endHigh)} ${sx(total)},${sy(endLow)}" fill="var(--line-soft)"/>`;
   for (let y = ymin; y <= ymax; y++) {
     s += `<line x1="${L}" x2="${W - R}" y1="${sy(y)}" y2="${sy(y)}" stroke="var(--line)" stroke-width=".7"/>`;
     if ((ymax - y) % stepY === 0) s += `<text x="${L - 6}" y="${sy(y) + 3.5}" text-anchor="end">${y}</text>`;
   }
-  [["2026-10-08", "8 okt"], ["2026-11-01", "1 nov"], ["2026-12-01", "1 dec"], ["2027-01-01", "1 jan"]].forEach(([dd, l], i, a) => {
-    const x = sx(ddiff(START.date, dd));
+  [[S.date, shortDate(S.date)], ["2026-11-01", "1 nov"], ["2026-12-01", "1 dec"], ["2027-01-01", "1 jan"]].forEach(([dd, l], i, a) => {
+    const x = sx(ddiff(S.date, dd));
     if (i > 0 && i < a.length - 1) s += `<line x1="${x}" x2="${x}" y1="${T}" y2="${H - B}" stroke="var(--line)" stroke-dasharray="2 3"/>`;
     s += `<text x="${x}" y="${H - 8}" text-anchor="${i === 0 ? "start" : i === a.length - 1 ? "end" : "middle"}">${l}</text>`;
   });
-  s += `<line x1="${sx(0)}" y1="${sy(START.kg)}" x2="${sx(total)}" y2="${sy(endT)}" stroke="var(--target)" stroke-width="2" stroke-dasharray="6 4"/>`;
+  s += `<line x1="${sx(0)}" y1="${sy(S.kg)}" x2="${sx(total)}" y2="${sy(endT)}" stroke="var(--target)" stroke-width="2" stroke-dasharray="6 4"/>`;
   s += `<text x="${sx(total) - 2}" y="${sy(endT) - 8}" text-anchor="end" style="fill:var(--target-ink)">${fmt(endT)}</text>`;
   if (pts.length > 1) s += `<polyline points="${pts.map(p => sx(p.x) + "," + sy(p.y)).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
   pts.forEach((p, i) => { const last = i === pts.length - 1; s += `<circle cx="${sx(p.x)}" cy="${sy(p.y)}" r="${last ? 5.5 : 3.5}" fill="${last ? "var(--accent)" : "var(--surface)"}" stroke="${last ? "var(--surface)" : "var(--accent)"}" stroke-width="2"/>`; });
   return s + "</svg>";
 }
+function measureCard(m) {
+  const list = entries().filter(e => e[m.id]);
+  let body;
+  if (!list.length) body = `<p class="fine">Inget mått än. Lägg in det vid nästa vägning.</p>`;
+  else if (list.length === 1) body = `<p><span class="mono">${fmt(list[0][m.id])} cm</span> <span class="fine">den ${shortDate(list[0].date)}. Nästa mått visar förändringen.</span></p>`;
+  else {
+    const dlt = list[list.length - 1][m.id] - list[0][m.id];
+    const good = m.good === "down" ? dlt < 0 : dlt > 0;
+    body = `<p><span class="mid" style="font-size:28px;color:${dlt === 0 ? "var(--fg)" : good ? "var(--accent)" : "var(--target-ink)"}">${signed(dlt)} cm</span> <span class="fine">sedan ${shortDate(list[0].date)} · nu ${fmt(list[list.length - 1][m.id])} cm</span></p>`;
+  }
+  return `<div class="card"><div class="rowb"><b style="font-size:13px">${m.label}</b><span class="fine" style="font-size:11px">${m.good === "down" ? "Mål: minska" : "Mål: öka"}</span></div>${body}</div>`;
+}
 function renderFramsteg() {
-  const t = today(), last = entries[entries.length - 1];
-  const endT = START.kg - TARGET_RATE * ddiff(START.date, END) / 7;
-  const lost = last ? START.kg - last.kg : 0;
-  const waists = entries.filter(e => e.waist);
-  const sg = suggest(), nk = nextMonthKey(monthKey(t));
-  const nkDay = nk + "-01";
+  const pr = P(), t = today(), ents = entries(), last = ents[ents.length - 1];
+  const endT = pr.start.kg - pr.rate * ddiff(pr.start.date, END) / 7;
+  const lost = last ? pr.start.kg - last.kg : 0;
+  const sg = suggest(), nk = nextMonthKey(monthKey(t)), r = pr.rule, months = D().months;
   const already = months[nk] && months[nk].kcal === (sg.kind === "wait" ? sg.cur : sg.kcal);
   const head = sg.kind === "wait" ? "Fortsätt med " + fint(sg.cur) + " kcal" : sg.kind === "keep" ? "Behåll " + fint(sg.cur) + " kcal" : (sg.kind === "down" ? "Sänk till " : "Höj till ") + fint(sg.kcal) + " kcal";
-  const body = sg.kind === "wait" ? "Förslaget räknas fram när du har två vägningar med minst två veckors mellanrum."
-    : "Trend: " + fmt(Math.abs(sg.t.perWeek), 2) + " kg " + (sg.t.perWeek >= 0 ? "ner" : "upp") + " per vecka, mående i snitt " + fmt(sg.t.mood) + (sg.t.waistDelta !== null ? ", midja " + (sg.t.waistDelta <= 0 ? "−" : "+") + fmt(Math.abs(sg.t.waistDelta)) + " cm" : "") + ". " + sg.why;
-  const showApply = sg.kind !== "wait" && db && canWrite && nk <= "2026-12";
-  return `
-  <div class="head"><div class="eyebrow">${Math.max(0, ddiff(t, END))} dagar kvar till 1 jan</div><h1>Framsteg</h1></div>
+  const mtxt = sg.t ? (sg.t.waistDelta !== null ? ", midja " + signed(sg.t.waistDelta) + " cm" : "") + (sg.t.hipDelta !== null ? ", stuss " + signed(sg.t.hipDelta) + " cm" : "") : "";
+  const body = sg.kind === "wait" ? "Förslaget räknas fram när det finns två vägningar med minst två veckors mellanrum."
+    : "Trend: " + fmt(Math.abs(sg.t.perWeek), 2) + " kg " + (sg.t.perWeek >= 0 ? "ner" : "upp") + " per vecka, mående i snitt " + fmt(sg.t.mood) + mtxt + ". " + sg.why;
+  const showApply = sg.kind !== "wait" && nk <= "2026-12";
+  return `${switcher()}
+  <div class="head"><div class="eyebrow">${Math.max(0, ddiff(t, END))} dagar kvar till 1 jan</div><h1>Framsteg</h1>
+    ${pr.focus ? `<p class="fine" style="margin-top:4px">${pr.focus}</p>` : ""}</div>
 
   <div class="stats">
-    <div><span>Start 8 okt</span><b>79,5</b><span>kg</span></div>
-    <div><span>Senast${last ? " " + shortDate(last.date) : ""}</span><b>${last ? fmt(last.kg) : "–"}</b><span>${last && lost ? (lost > 0 ? "−" : "+") + fmt(Math.abs(lost)) + " kg totalt" : "kg"}</span></div>
-    <div><span>Mål 1 jan</span><b style="color:var(--target-ink)">≈ ${fmt(endT)}</b><span>0,45 kg / vecka</span></div>
+    <div><span>Start ${shortDate(pr.start.date)}</span><b>${fmt(pr.start.kg)}</b><span>kg</span></div>
+    <div><span>Senast${last ? " " + shortDate(last.date) : ""}</span><b>${last ? fmt(last.kg) : "–"}</b><span>${last && lost ? signed(-lost) + " kg totalt" : "kg"}</span></div>
+    <div><span>Mål 1 jan</span><b style="color:var(--target-ink)">≈ ${fmt(endT)}</b><span>${fint(pr.rate)} kg / vecka</span></div>
   </div>
 
+  ${pr.measures.length > 1 ? `<div class="grid2">${pr.measures.map(measureCard).join("")}</div>` : ""}
+
   <div class="card" style="padding:14px 10px 12px">
-    <div class="rowb" style="padding:0 4px"><b style="font-size:13px">Vikt</b><span class="fine" style="font-size:11px">${entries.length} ${entries.length === 1 ? "vägning" : "vägningar"}</span></div>
+    <div class="rowb" style="padding:0 4px"><b style="font-size:13px">Vikt</b><span class="fine" style="font-size:11px">${ents.length} ${ents.length === 1 ? "vägning" : "vägningar"}</span></div>
     ${chart()}
     <div class="legend" style="padding:0 4px">
-      <span><i style="width:10px;height:10px;border-radius:99px;background:var(--accent)"></i>Din vikt</span>
-      <span><i style="width:14px;border-top:2px dashed var(--target)"></i>Mål −500 kcal/dag</span>
-      <span><i style="width:12px;height:8px;background:var(--line-soft);border:1px solid var(--line)"></i>0,4–0,7 kg/v</span>
+      <span><i style="width:10px;height:10px;border-radius:99px;background:var(--accent)"></i>Vikt</span>
+      <span><i style="width:14px;border-top:2px dashed var(--target)"></i>Mål ${pr.rateNote}</span>
+      <span><i style="width:12px;height:8px;background:var(--line-soft);border:1px solid var(--line)"></i>${fint(pr.low)}–${fint(pr.high)} kg/v</span>
     </div>
   </div>
 
-  <div class="card">
-    <div class="rowb"><b style="font-size:13px">Midja</b><span class="fine" style="font-size:11px">Mät i höjd med naveln</span></div>
-    ${waists.length === 0 ? `<p class="fine">Inget mått än. Lägg in det vid nästa vägning; midjan visar magfettet bättre än vågen.</p>`
-      : waists.length === 1 ? `<p><span class="mono">${fmt(waists[0].waist)} cm</span> <span class="fine">den ${shortDate(waists[0].date)}. Nästa mått visar förändringen.</span></p>`
-      : `<p><span class="mid" style="font-size:28px">${(waists[waists.length - 1].waist - waists[0].waist <= 0 ? "−" : "+") + fmt(Math.abs(waists[waists.length - 1].waist - waists[0].waist))} cm</span> <span class="fine">sedan ${shortDate(waists[0].date)} · nu ${fmt(waists[waists.length - 1].waist)} cm</span></p>`}
-  </div>
+  ${pr.measures.length === 1 ? measureCard(pr.measures[0]) : ""}
 
   <div class="card ink verdict">
-    <div class="rowb"><span class="eyebrow">Månadskoll 1 ${monthName(nk).slice(0, 3)}</span><span class="fine" style="font-size:11px">om ${Math.max(0, ddiff(t, nkDay))} dagar</span></div>
+    <div class="rowb"><span class="eyebrow">Månadskoll 1 ${monthName(nk).slice(0, 3)}</span><span class="fine" style="font-size:11px">om ${Math.max(0, ddiff(t, nk + "-01"))} dagar</span></div>
     <div class="mid" style="font-size:26px">${head}</div>
     <p class="fine" style="color:var(--ink-muted)">${esc(body)}</p>
     ${showApply ? `<button type="button" class="btn" data-act="apply" data-kcal="${sg.kcal}" ${already ? "disabled" : ""}>${already ? "Sparat för " + monthName(nk) : "Spara " + fint(sg.kcal) + " kcal för " + monthName(nk)}</button>` : ""}
@@ -512,14 +640,14 @@ function renderFramsteg() {
   <div class="card">
     <b style="font-size:13px">Kalorinivå per månad</b>
     <table><thead><tr><th>Period</th><th class="r">Kcal</th><th class="r">P</th><th class="r">F</th><th class="r">K</th></tr></thead><tbody>
-    ${["2026-10", "2026-11", "2026-12"].map(k => { const kc = kcalFor(k), m = macrosFor(kc); return `<tr><td>${k === "2026-10" ? "8–31 okt" : monthName(k)}${!months[k] ? '<span class="chip">sätts den 1:a</span>' : ""}</td><td class="r">${fint(kc)}</td><td class="r">${m.p}</td><td class="r">${m.f}</td><td class="r">${m.c}</td></tr>`; }).join("")}
+    ${["2026-10", "2026-11", "2026-12"].map(k => { const kc = kcalFor(k), m = macrosFor(kc, pr.protein); return `<tr><td>${k === "2026-10" ? Number(pr.start.date.slice(8)) + "–31 okt" : monthName(k)}${!months[k] ? '<span class="chip">sätts den 1:a</span>' : ""}</td><td class="r">${fint(kc)}</td><td class="r">${m.p}</td><td class="r">${m.f}</td><td class="r">${m.c}</td></tr>`; }).join("")}
     </tbody></table>
-    <p class="fine" style="font-size:12px">Under 0,3 kg/v sänks 150 kcal (aldrig under 1 900). Över 0,8 kg/v eller mående 2 eller lägre höjs 150 kcal.</p>
+    <p class="fine" style="font-size:12px">Under ${fint(r.min)} kg/v (och midjan står still) sänks ${r.step} kcal, aldrig under ${fint(r.floor)}. Över ${fint(r.max)} kg/v eller mående 2 eller lägre höjs ${r.step} kcal.</p>
   </div>
 
   <div class="card">
     <b style="font-size:13px">Säkerhetskopia</b>
-    <p class="fine">Allt sparas bara i den här telefonen. Spara en kopia ibland, så kan du läsa in den igen om du byter telefon eller rensar webbläsaren.</p>
+    <p class="fine">Allt sparas bara i den här telefonen, för båda profilerna. Spara en kopia ibland, så kan du läsa in den igen om du byter telefon eller rensar webbläsaren.</p>
     <div class="grid2">
       <button type="button" class="btn" data-act="export" style="min-height:46px;font-size:14px">Spara kopia</button>
       <label class="btn" for="import-file" style="min-height:46px;font-size:14px;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--accent);border:1px solid var(--accent);cursor:pointer">Läs in kopia</label>
@@ -529,34 +657,34 @@ function renderFramsteg() {
 }
 
 /* ---------- Träning ---------- */
-function workoutId(date, pass) { return date + "_" + pass; }
+const workoutId = (date, pass) => date + "_" + pass;
 function lastKg(pass, exId, before) {
-  const list = Object.values(workouts).filter(w => w.pass === pass && w.date < before && w.kg && w.kg[exId] != null).sort((a, b) => a.date < b.date ? 1 : -1);
+  const list = Object.values(D().workouts).filter(w => w.pass === pass && w.date < before && w.kg && w.kg[exId] != null).sort((a, b) => a.date < b.date ? 1 : -1);
   return list.length ? list[0].kg[exId] : null;
 }
 function renderTraning() {
-  const t = today(), d = parse(t), plan = dayPlan(t);
-  if (!trainPass) {
+  const pr = P(), t = today(), d = parse(t), plan = dayPlan(t), keys = Object.keys(pr.passes);
+  if (!trainPass || !pr.passes[trainPass]) {
+    trainPass = keys[0];
     if (plan.kind === "lift") trainPass = plan.pass;
-    else { for (let i = 1; i < 7; i++) { const p = dayPlan(addDays(t, i)); if (p.kind === "lift") { trainPass = p.pass; break; } } }
+    else for (let i = 1; i < 7; i++) { const p = dayPlan(addDays(t, i)); if (p.kind === "lift") { trainPass = p.pass; break; } }
   }
-  const P = PASSES[trainPass], wid = workoutId(t, trainPass), w = workouts[wid] || { done: {}, kg: {} };
+  const PS = pr.passes[trainPass], w = D().workouts[workoutId(t, trainPass)] || { done: {}, kg: {} };
   let doneSets = 0, totalSets = 0;
-  P.ex.forEach(ex => { for (let i = 0; i < ex.n; i++) { totalSets++; if (w.done && w.done[ex.id + "-" + i]) doneSets++; } });
-  const order = [1, 2, 3, 4, 5, 6, 0];
-  const mondayOffset = (d.getDay() + 6) % 7;
-  const prevSession = Object.values(workouts).filter(x => x.pass === trainPass && x.date < t).sort((a, b) => a.date < b.date ? 1 : -1)[0];
-  return `
-  <div class="head"><div class="eyebrow">${WDAYS[d.getDay()]} ${shortDate(t)} · Idag: ${plan.label}</div><h1>${"Pass " + trainPass + " · " + P.name}</h1></div>
+  PS.ex.forEach(ex => { for (let i = 0; i < ex.n; i++) { totalSets++; if (w.done && w.done[ex.id + "-" + i]) doneSets++; } });
+  const order = [1, 2, 3, 4, 5, 6, 0], mondayOffset = (d.getDay() + 6) % 7;
+  const prevSession = Object.values(D().workouts).filter(x => x.pass === trainPass && x.date < t).sort((a, b) => a.date < b.date ? 1 : -1)[0];
+  return `${switcher()}
+  <div class="head"><div class="eyebrow">${WDAYS[d.getDay()]} ${shortDate(t)} · Idag: ${plan.label}</div><h1>Pass ${trainPass} · ${PS.name}</h1></div>
 
-  <div class="week">${order.map((wd, i) => { const p = WEEK[wd]; const date = addDays(t, i - mondayOffset); const isT = date === t; return `<div class="wd ${isT ? "today" : p.kind === "lift" ? "lift" : p.kind === "rest" ? "rest" : ""}"><span class="a">${WDAYS[wd].slice(0, 3)}</span><span class="b">${p.tag}</span></div>`; }).join("")}</div>
+  <div class="week">${order.map((wd, i) => { const p = pr.week[wd]; const date = addDays(t, i - mondayOffset); return `<div class="wd ${date === t ? "today" : p.kind === "lift" ? "lift" : p.kind === "rest" ? "rest" : ""}"><span class="a">${WDAYS[wd].slice(0, 3)}</span><span class="b">${p.tag}</span></div>`; }).join("")}</div>
 
-  <div class="seg" role="group" aria-label="Välj pass">${["A", "B", "C"].map(k => `<button type="button" data-pass="${k}" aria-pressed="${trainPass === k}">Pass ${k}</button>`).join("")}</div>
+  <div class="seg" role="group" aria-label="Välj pass" style="grid-template-columns:repeat(${keys.length},minmax(0,1fr))">${keys.map(k => `<button type="button" data-pass="${k}" aria-pressed="${trainPass === k}">Pass ${k}</button>`).join("")}</div>
 
   <div class="rowb fine"><span>${doneSets} av ${totalSets} set klara idag</span><span>${prevSession ? "Förra: " + shortDate(prevSession.date) : "Första gången"}</span></div>
   <div class="bar thin"><i style="width:${totalSets ? doneSets / totalSets * 100 : 0}%"></i></div>
 
-  ${P.ex.map(ex => {
+  ${PS.ex.map(ex => {
     const cur = w.kg && w.kg[ex.id] != null ? w.kg[ex.id] : null;
     const prev = lastKg(trainPass, ex.id, t);
     const val = cur != null ? cur : prev != null ? prev : "";
@@ -572,127 +700,29 @@ function renderTraning() {
 
   <div class="card">
     <b style="font-size:13px">Progression</b>
-    <ul class="rules" style="margin:0">
-      <li>Lämna 1–2 reps i reserv på sista setet.</li>
-      <li>Klarar du övre delen av intervallet på alla set: öka 2,5 kg i överkroppen, 5 kg i knäböj och marklyft.</li>
-      <li>Vila 2–3 min i basövningarna, 60–90 s i övriga.</li>
-      <li>Står en övning still tre pass i rad: sänk vikten 10 % och bygg upp igen.</li>
-      <li>Vecka 52 (21–27 dec) är en lättare vecka: hälften av seten.</li>
-    </ul>
+    <ul class="rules" style="margin:0">${pr.progression.map(r => `<li>${r}</li>`).join("")}</ul>
   </div>`;
 }
 
-/* ---------- Render & events ---------- */
+/* ---------- Render och händelser ---------- */
 function render(force) {
   const ae = document.activeElement;
   if (!force && ae && ae.tagName === "INPUT" && $("#view").contains(ae)) { deferred = true; return; }
   deferred = false;
-  const v = $("#view");
-  v.innerHTML = tab === "idag" ? renderIdag() : tab === "logga" ? renderLogga() : tab === "framsteg" ? renderFramsteg() : renderTraning();
+  document.documentElement.dataset.profile = store.active;
+  $("#view").innerHTML = tab === "idag" ? renderIdag() : tab === "logga" ? renderLogga() : tab === "framsteg" ? renderFramsteg() : renderTraning();
   document.querySelectorAll("nav.tabs button").forEach(b => { if (b.dataset.tab === tab) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
 }
-function go(t) { tab = t; form.msg = ""; applyMsg = ""; render(true); window.scrollTo(0, 0); try { localStorage.setItem("formplan-tab", t); } catch (e) {} }
+function go(t) { tab = t; form.msg = ""; applyMsg = ""; render(true); window.scrollTo(0, 0); }
+function switchProfile(pid) {
+  if (!PROFILES[pid] || pid === store.active) return;
+  store.active = pid; persist();
+  trainPass = null; pendingDel = null; form = { kg: null, mood: 4, msg: "", err: false }; applyMsg = "";
+  render(true);
+}
 
 document.querySelector("nav.tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) go(b.dataset.tab); });
 document.addEventListener("focusout", () => setTimeout(() => { if (deferred) render(); }, 0));
-
-$("#view").addEventListener("click", async e => {
-  const b = e.target.closest("button"); if (!b) return;
-  const t = today();
-  if (b.dataset.go) return go(b.dataset.go);
-  if (b.dataset.act === "export") return exportData();
-  if (b.dataset.pass !== undefined && b.dataset.pass !== "") { trainPass = b.dataset.pass; if (tab !== "traning") go("traning"); else render(true); return; }
-  if (b.dataset.meal) {
-    if (!needWrite()) return;
-    const doc = dayDoc(t), meals = Object.assign({}, doc.meals || {});
-    meals[b.dataset.meal] = !meals[b.dataset.meal];
-    days[t] = { date: t, meals, bottles: doc.bottles || 0 };
-    render(true); save("days", t, days[t]); return;
-  }
-  const act = b.dataset.act;
-  if (act === "bottle+" || act === "bottle-") {
-    if (!needWrite()) return;
-    const doc = dayDoc(t), n = Math.max(0, Math.min(20, (doc.bottles || 0) + (act === "bottle+" ? 1 : -1)));
-    days[t] = { date: t, meals: Object.assign({}, doc.meals || {}), bottles: n };
-    render(true); save("days", t, days[t]); return;
-  }
-  if (act === "kg+" || act === "kg-") { form.kg += act === "kg+" ? 1 : -1; form.kg = Math.max(400, Math.min(2000, form.kg)); form.msg = ""; render(true); return; }
-  if (b.dataset.mood) { form.mood = Number(b.dataset.mood); form.msg = ""; render(true); return; }
-  if (act === "save-week") {
-    if (!needWrite()) return;
-    const waistRaw = $("#f-waist").value.replace(",", ".").trim(), stepsRaw = $("#f-steps").value.replace(/\s/g, "");
-    const waist = waistRaw ? parseFloat(waistRaw) : null, steps = stepsRaw ? parseInt(stepsRaw, 10) : null;
-    if (waist !== null && !(waist >= 50 && waist <= 160)) { form.msg = "Skriv midjemåttet i cm, till exempel 94."; form.err = true; return render(true); }
-    if (steps !== null && !(steps >= 0 && steps <= 60000)) { form.msg = "Skriv stegen som ett heltal, till exempel 8500."; form.err = true; return render(true); }
-    const data = { date: t, kg: form.kg / 10, waist: waist === null ? null : Math.round(waist * 2) / 2, steps, mood: form.mood, note: $("#f-note").value.trim().slice(0, 200) };
-    b.disabled = true;
-    try { await db.collection("weighins").doc(t).set(data); form.msg = "Sparat för " + shortDate(t) + ". Trenden uppdateras i Framsteg."; form.err = false; }
-    catch (err) { if (err && err.code === "invalid_argument") { canWrite = false; form.msg = "Du kan bara läsa den här appen."; } else form.msg = "Kunde inte spara. Försök igen om en stund."; form.err = true; }
-    render(true); return;
-  }
-  if (b.dataset.del) {
-    const id = b.dataset.del;
-    if (pendingDel !== id) { pendingDel = id; render(true); setTimeout(() => { if (pendingDel === id) { pendingDel = null; render(); } }, 4000); return; }
-    pendingDel = null; b.disabled = true;
-    try { await db.collection("weighins").doc(id).delete(); } catch (err) { toast("Kunde inte ta bort raden. Försök igen."); render(true); }
-    return;
-  }
-  if (act === "apply") {
-    if (!needWrite()) return;
-    const kcal = Number(b.dataset.kcal), nk = nextMonthKey(monthKey(t)), m = macrosFor(kcal);
-    b.disabled = true;
-    try { await db.collection("months").doc(nk).set({ kcal, protein: m.p, fat: m.f, carbs: m.c, setOn: t }); applyMsg = "Sparat. Nivån gäller från 1 " + monthName(nk) + "."; }
-    catch (err) { applyMsg = "Kunde inte spara. Försök igen."; }
-    render(true); return;
-  }
-  if (b.dataset.set) {
-    if (!needWrite()) return;
-    const wid = workoutId(t, trainPass), w = workouts[wid] || { date: t, pass: trainPass, done: {}, kg: {} };
-    const done = Object.assign({}, w.done || {}); done[b.dataset.set] = !done[b.dataset.set];
-    workouts[wid] = { date: t, pass: trainPass, done, kg: Object.assign({}, w.kg || {}) };
-    render(true); save("workouts", wid, workouts[wid]); return;
-  }
-});
-$("#view").addEventListener("change", e => {
-  const inp = e.target.closest("input[data-kg]"); if (!inp) return;
-  if (!needWrite()) return;
-  const t = today(), wid = workoutId(t, trainPass), w = workouts[wid] || { date: t, pass: trainPass, done: {}, kg: {} };
-  const raw = inp.value.replace(",", ".").trim(), v = raw === "" ? null : parseFloat(raw);
-  if (v !== null && !(v >= 0 && v <= 500)) { toast("Skriv vikten i kg, till exempel 52,5."); return; }
-  const kg = Object.assign({}, w.kg || {}); if (v === null) delete kg[inp.dataset.kg]; else kg[inp.dataset.kg] = Math.round(v * 4) / 4;
-  workouts[wid] = { date: t, pass: trainPass, done: Object.assign({}, w.done || {}), kg };
-  save("workouts", wid, workouts[wid]);
-});
-
-try { const s = localStorage.getItem("formplan-tab"); if (["idag", "logga", "framsteg", "traning"].includes(s)) tab = s; } catch (e) {}
-if (["idag", "logga", "framsteg", "traning"].includes(location.hash.slice(1))) tab = location.hash.slice(1);
-render(true);
-
-/* ---------- Lokal lagring i telefonen ---------- */
-const KEY = "formplan-data-v1";
-function loadStore() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
-let store = loadStore();
-const subs = {};
-function snap(col) { return { docs: Object.keys(store[col] || {}).sort().map(id => ({ id, data: () => store[col][id] })) }; }
-function emit(col) { (subs[col] || []).forEach(f => f(snap(col))); }
-function persist() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) { throw { code: "unavailable" }; } }
-const LocalDB = {
-  collection(col) {
-    return {
-      doc(id) {
-        return {
-          async set(d) { (store[col] || (store[col] = {}))[id] = JSON.parse(JSON.stringify(d)); persist(); emit(col); },
-          async delete() { if (store[col]) delete store[col][id]; persist(); emit(col); }
-        };
-      },
-      onSnapshot(cb) { (subs[col] || (subs[col] = [])).push(cb); setTimeout(() => cb(snap(col)), 0); return () => {}; }
-    };
-  }
-};
-if (!store.weighins) store.weighins = { "2026-10-08": { date: "2026-10-08", kg: 79.5, waist: null, mood: 3, note: "Startvikt" } };
-if (!store.months) store.months = { "2026-10": { kcal: 2100, protein: 170, fat: 65, carbs: 210, setOn: "2026-10-08" } };
-try { persist(); } catch (e) {}
-try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
 
 function exportData() {
   const blob = new Blob([JSON.stringify(store, null, 2)], { type: "application/json" });
@@ -702,29 +732,81 @@ function exportData() {
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   toast("Säkerhetskopian är sparad i Hämtade filer.");
 }
-document.addEventListener("change", e => {
-  if (e.target.id !== "import-file" || !e.target.files[0]) return;
-  const r = new FileReader();
-  r.onload = () => {
-    try {
-      const d = JSON.parse(r.result);
-      if (!d || typeof d !== "object" || !d.weighins) throw 0;
-      store = d; persist(); ["weighins", "months", "days", "workouts"].forEach(emit);
-      toast("Säkerhetskopian är inläst.");
-    } catch (err) { toast("Filen gick inte att läsa. Välj en formplan-backup (.json)."); }
-  };
-  r.readAsText(e.target.files[0]);
+
+$("#view").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const t = today(), pr = P();
+  if (b.dataset.profile) return switchProfile(b.dataset.profile);
+  if (b.dataset.go) return go(b.dataset.go);
+  if (b.dataset.act === "export") return exportData();
+  if (b.dataset.pass !== undefined && b.dataset.pass !== "") { trainPass = b.dataset.pass; if (tab !== "traning") go("traning"); else render(true); return; }
+  if (b.dataset.meal) {
+    const doc = dayDoc(t), meals = Object.assign({}, doc.meals || {});
+    meals[b.dataset.meal] = !meals[b.dataset.meal];
+    setDoc("days", t, { date: t, meals, bottles: doc.bottles || 0 }); return render(true);
+  }
+  const act = b.dataset.act;
+  if (act === "bottle+" || act === "bottle-") {
+    const doc = dayDoc(t), n = Math.max(0, Math.min(20, (doc.bottles || 0) + (act === "bottle+" ? 1 : -1)));
+    setDoc("days", t, { date: t, meals: Object.assign({}, doc.meals || {}), bottles: n }); return render(true);
+  }
+  if (act === "kg+" || act === "kg-") { form.kg = Math.max(300, Math.min(2000, form.kg + (act === "kg+" ? 1 : -1))); form.msg = ""; return render(true); }
+  if (b.dataset.mood) { form.mood = Number(b.dataset.mood); form.msg = ""; return render(true); }
+  if (act === "save-week") {
+    const data = { date: t, kg: form.kg / 10, mood: form.mood, note: $("#f-note").value.trim().slice(0, 200) };
+    for (const m of pr.measures) {
+      const raw = $("#f-" + m.id).value.replace(",", ".").trim();
+      const v = raw ? parseFloat(raw) : null;
+      if (v !== null && !(v >= 40 && v <= 180)) { form.msg = "Skriv " + m.label.toLowerCase() + "måttet i cm, till exempel " + m.ph.replace("t.ex. ", "") + "."; form.err = true; return render(true); }
+      data[m.id] = v === null ? null : Math.round(v * 2) / 2;
+    }
+    const stepsRaw = $("#f-steps").value.replace(/\s/g, "");
+    const steps = stepsRaw ? parseInt(stepsRaw, 10) : null;
+    if (steps !== null && !(steps >= 0 && steps <= 60000)) { form.msg = "Skriv stegen som ett heltal, till exempel 8500."; form.err = true; return render(true); }
+    data.steps = steps;
+    setDoc("weighins", t, data);
+    form.msg = "Sparat för " + shortDate(t) + ". Trenden uppdateras i Framsteg."; form.err = false;
+    return render(true);
+  }
+  if (b.dataset.del) {
+    const id = b.dataset.del;
+    if (pendingDel !== id) { pendingDel = id; render(true); setTimeout(() => { if (pendingDel === id) { pendingDel = null; render(); } }, 4000); return; }
+    pendingDel = null; delDoc("weighins", id); return render(true);
+  }
+  if (act === "apply") {
+    const kcal = Number(b.dataset.kcal), nk = nextMonthKey(monthKey(t)), m = macrosFor(kcal, pr.protein);
+    setDoc("months", nk, { kcal, protein: m.p, fat: m.f, carbs: m.c, setOn: t });
+    applyMsg = "Sparat. Nivån gäller från 1 " + monthName(nk) + "."; return render(true);
+  }
+  if (b.dataset.set) {
+    const wid = workoutId(t, trainPass), w = D().workouts[wid] || { date: t, pass: trainPass, done: {}, kg: {} };
+    const done = Object.assign({}, w.done || {}); done[b.dataset.set] = !done[b.dataset.set];
+    setDoc("workouts", wid, { date: t, pass: trainPass, done, kg: Object.assign({}, w.kg || {}) }); return render(true);
+  }
+});
+$("#view").addEventListener("change", e => {
+  if (e.target.id === "import-file" && e.target.files[0]) {
+    const rd = new FileReader();
+    rd.onload = () => {
+      try {
+        const raw = JSON.parse(rd.result);
+        if (!raw || typeof raw !== "object" || !(raw.p || raw.weighins)) throw 0;
+        store = normalize(raw); persist(); trainPass = null; form.kg = null; render(true);
+        toast("Säkerhetskopian är inläst.");
+      } catch (err) { toast("Filen gick inte att läsa. Välj en formplan-backup (.json)."); }
+    };
+    rd.readAsText(e.target.files[0]);
+    return;
+  }
+  const inp = e.target.closest("input[data-kg]"); if (!inp) return;
+  const t = today(), wid = workoutId(t, trainPass), w = D().workouts[wid] || { date: t, pass: trainPass, done: {}, kg: {} };
+  const raw = inp.value.replace(",", ".").trim(), v = raw === "" ? null : parseFloat(raw);
+  if (v !== null && !(v >= 0 && v <= 500)) { toast("Skriv vikten i kg, till exempel 52,5."); return; }
+  const kg = Object.assign({}, w.kg || {}); if (v === null) delete kg[inp.dataset.kg]; else kg[inp.dataset.kg] = Math.round(v * 4) / 4;
+  setDoc("workouts", wid, { date: t, pass: trainPass, done: Object.assign({}, w.done || {}), kg });
 });
 
-db = LocalDB;
-db.collection("weighins").onSnapshot(s => {
-  entries = s.docs.map(x => x.data()).filter(x => x && typeof x.kg === "number" && x.date).sort((a, b) => a.date < b.date ? -1 : 1);
-  render();
-});
-db.collection("months").onSnapshot(s => { months = {}; s.docs.forEach(x => { const v = x.data(); if (v && typeof v.kcal === "number") months[x.id] = v; }); render(); });
-db.collection("days").onSnapshot(s => { days = {}; s.docs.forEach(x => { days[x.id] = x.data(); }); render(); });
-db.collection("workouts").onSnapshot(s => { workouts = {}; s.docs.forEach(x => { workouts[x.id] = x.data(); }); render(); });
-
+render(true);
 if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
 </script>
 
